@@ -1,0 +1,252 @@
+:root{
+    --background: #252735;
+    --user-message: #3E4159;
+    --ai-message: #171822;
+    --form-color: #181924;
+}
+
+html{
+    background-color: var(--background);
+    padding: 0 2.5%;
+    overflow: hidden;
+    font-family: sans-serif;
+}
+
+body{
+    height: 100svh;
+}
+
+main{
+    height: 100%;
+}
+
+nav{
+    width: 100%;
+    text-align: center;
+    color: white;
+    font-weight: 800;
+}
+
+section{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.chat{
+    height: fit-content;
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+.chat::-webkit-scrollbar{
+    display: none;
+}
+
+.message{
+    font-size: 20px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    font-weight: 500;
+    border-radius: 12px;
+    color: white;
+}
+
+.message.user{
+    background-color: var(--user-message);
+    margin-left: auto;
+    margin-right: 0;
+    border-bottom-right-radius: 0px;   
+}
+
+.message.bot{
+    background-color: var(--ai-message);
+    margin-left: 0;
+    margin-right: auto;
+    border-bottom-left-radius: 0px;   
+}
+
+.redact.user{
+    align-self: end;
+    aspect-ratio: 1/1;
+    background: none;
+    border: none;
+    background-image: url('./assets/img/pencil-dimmed.svg');
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.timestamp{
+    position: absolute;
+    top: auto;
+    bottom: 0;
+    opacity: 0.4;
+}
+
+.timestamp.bot{
+    left: auto;
+    right: 10px;
+}
+
+.redact.user:hover{
+    background-image: url('./assets/img/pencil.svg');
+}
+
+form{
+    background-color: var(--form-color);
+    box-sizing: border-box;
+    position: absolute;
+    align-self: end;
+    top: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: end;
+    justify-content: space-between;
+    z-index: 1000;
+}
+
+form textarea{
+    background: none;
+    border: none;
+    color: white;
+    field-sizing: content;
+    resize: none;
+    font-size: 18px;
+}
+
+form button{
+    aspect-ratio: 1/1;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    outline: none;
+    background: none;
+    background-image: url('./assets/img/arrow-dimmed.svg');
+    background-position: center;
+    background-size: 50%;
+    background-repeat: no-repeat;
+}
+
+form button:hover{
+    border: 2px solid rgba(255, 255, 255, 1);
+    background-image: url('./assets/img/arrow.svg');
+}
+
+@media screen and (width > 768px) {
+    section{
+        max-width: 908px;
+        margin: 0 auto;
+        height: 100%;
+    }
+
+    .chat{
+        width: 100%;
+        max-height: 85%;
+        min-height: 15%;
+        margin-bottom: 25%;
+        gap: 20px;
+    }
+
+    .message{
+        max-width: 80%;
+        min-width: 15%;
+        padding: 10px;
+        margin-right: 0;
+        font-size: 18px;
+        font-weight: 500;
+    }
+
+    .message p{
+        margin: 0;
+    }
+
+    .redact.user{
+        height: 25px;
+        top: 30%;
+        bottom: -70%;
+        background-size: 70% !important;
+    }
+
+    .timestamp{
+        height: 25px;
+        font-size: 12px;
+        background-size: 70% !important;
+    }
+
+    form{
+        padding: 15px;
+        bottom: 60px;
+        border-radius: 12px;
+        width: 100%;
+    }
+
+    form textarea{
+        max-width: 90%;
+        min-width: 90%;
+        max-height: 150px;
+        min-height: 60px;
+    }
+
+    form textarea::-webkit-scrollbar{
+        display: none;
+    }
+
+    form button{
+        width: 3%;
+        border-radius: 50px;
+    }
+}
+@media screen and (width < 768px) {
+    section{
+        width: 100%;
+        height: 100svh;
+    }
+
+    .chat{
+        width: 100%;
+        max-height: 85%;
+        min-height: 15%;
+        margin-bottom: 25%;
+        gap: 20px;
+    }
+
+    .message{
+        max-width: 80%;
+        min-width: 15%;
+        padding: 10px;
+        margin-right: 0;
+        font-size: 18px;
+        font-weight: 500;
+    }
+
+    .message p{
+        margin: 0;
+    }
+    .redact.user{
+        height: 25px;
+        top: 30%;
+        bottom: -70%;
+        background-size: 70% !important;
+    }
+
+    form{
+        padding: 15px;
+        bottom: 50px;
+        border-radius: 12px;
+        width: 100%;
+    }
+
+    form textarea{
+        width: 90%;
+        max-height: 150px;
+        min-height: 60px;
+    }
+
+    form button{
+        width: 7%;
+        border-radius: 50px;
+    }
+}
