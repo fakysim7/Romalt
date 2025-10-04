@@ -1,13 +1,9 @@
-# main.py
 import os
 import logging
-from aiohttp import web
+import asyncio
+from aiohttp import web, ClientSession
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
-import aiohttp_cors
-import aiohttp
-import asyncio
-
 from handlers import user
 from handlers.user import setup_web_routes
 from utils.logger import setup_logger
@@ -20,7 +16,19 @@ WEBHOOK_PATH = "/webhook/bot"
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
 PORT = int(os.getenv("PORT") or 8080)
 
+# --- Keep-alive task ---
+async def keep_alive():
+    """Регулярный пинг своего /health, чтобы Render не засыпал"""
+    while True:
+        try:
+            async with ClientSession() as session:
+                async with session.get(f"{WEBHOOK_HOST}/health") as resp:
+                    logger.info(f"Keep-alive ping status: {resp.status}")
+        except Exception as e:
+            logger.warning(f"Keep-alive failed: {e}")
+        await asyncio.sleep(300)  # каждые 5 минут
 
+# --- Startup / Shutdown ---
 async def on_startup(bot: Bot):
     info = await bot.get_webhook_info()
     logger.info(f"Webhook info: {info}")
@@ -34,32 +42,12 @@ async def on_startup(bot: Bot):
     else:
         logger.info(f"ℹ️ Webhook уже установлен")
 
-
 async def on_shutdown(bot: Bot):
     await bot.delete_webhook()
     await bot.session.close()
     logger.info("🛑 Webhook удален, бот остановлен")
 
-
-
-async def keep_alive(app):
-    async def ping():
-        while True:
-            try:
-                async with aiohttp.ClientSession() as session:
-                    await session.get(f"http://localhost:{PORT}/health")
-                    logger.debug("✅ Keep-alive ping sent")
-            except Exception as e:
-                logger.error(f"Keep-alive failed: {e}")
-            await asyncio.sleep(240)  # каждые 4 минуты
-    app['keep_alive_task'] = asyncio.create_task(ping())
-
-async def on_cleanup(app):
-    task = app.get('keep_alive_task')
-    if task:
-        task.cancel()
-
-
+# --- Main ---
 def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
@@ -72,17 +60,6 @@ def main():
     webhook_handler.register(app, path=WEBHOOK_PATH)
 
     setup_web_routes(app)
-
-    
-    cors = aiohttp_cors.setup(app, defaults={
-        "*": aiohttp_cors.ResourceOptions(
-            allow_credentials=True,
-            expose_headers="*",
-            allow_headers="*",
-        )
-    })
-    for route in list(app.router.routes()):
-        cors.add(route)
 
     async def health_check(request):
         return web.json_response({"status": "ok", "webhook": WEBHOOK_URL})
@@ -103,14 +80,12 @@ def main():
 
     setup_application(app, dp, bot=bot)
 
-    app.on_startup.append(keep_alive)
-    app.on_cleanup.append(on_cleanup)
+    # --- Запуск keep-alive ---
+    asyncio.create_task(keep_alive())
 
     logger.info(f"🚀 Запуск бота на порту {PORT}")
     logger.info(f"📡 Webhook URL: {WEBHOOK_URL}")
-    web.run_app(app, host="0.0.0.0", port=PORT, print=None)
-
+    web.run_app(app, host="0.0.0.0", port=PORT)
 
 if __name__ == "__main__":
     main()
-
