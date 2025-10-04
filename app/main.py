@@ -41,7 +41,7 @@ async def on_shutdown(bot: Bot):
     logger.info("🛑 Webhook удален, бот остановлен")
 
 
-# === Keep-alive задача ===
+
 async def keep_alive(app):
     async def ping():
         while True:
@@ -73,7 +73,7 @@ def main():
 
     setup_web_routes(app)
 
-    # ✅ CORS для Android WebApp
+    
     cors = aiohttp_cors.setup(app, defaults={
         "*": aiohttp_cors.ResourceOptions(
             allow_credentials=True,
@@ -103,7 +103,6 @@ def main():
 
     setup_application(app, dp, bot=bot)
 
-    # === Добавляем keep-alive ===
     app.on_startup.append(keep_alive)
     app.on_cleanup.append(on_cleanup)
 
@@ -114,3 +113,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
