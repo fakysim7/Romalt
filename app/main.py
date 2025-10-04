@@ -2,12 +2,11 @@ import os
 import logging
 from aiohttp import web
 from aiogram import Bot, Dispatcher
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 from handlers import user
-from handlers.user import setup_web_routes
-from utils.logger import setup_logger
 
-logger = setup_logger()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST")
@@ -24,14 +23,14 @@ async def on_startup(bot: Bot):
             drop_pending_updates=True,
             allowed_updates=["message", "callback_query", "web_app_data"]
         )
-        logger.info(f"✅ Webhook установлен: {WEBHOOK_URL}")
+        logger.info(f"Webhook установлен: {WEBHOOK_URL}")
     else:
-        logger.info(f"ℹ️ Webhook уже установлен")
+        logger.info("Webhook уже установлен")
 
 async def on_shutdown(bot: Bot):
     await bot.delete_webhook()
     await bot.session.close()
-    logger.info("🛑 Webhook удален, бот остановлен")
+    logger.info("Webhook удален")
 
 def main():
     bot = Bot(token=BOT_TOKEN)
@@ -44,28 +43,11 @@ def main():
     webhook_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
     webhook_handler.register(app, path=WEBHOOK_PATH)
 
-    setup_web_routes(app)
+    # Health check
+    async def health(request):
+        return web.json_response({"status": "ok"})
+    app.router.add_get('/health', health)
 
-    async def health_check(request):
-        return web.json_response({"status": "ok", "webhook": WEBHOOK_URL})
-
-    async def root_handler(request):
-        return web.json_response({
-            "bot": "Telegram AI Bot",
-            "status": "running",
-            "endpoints": {
-                "webhook": WEBHOOK_PATH,
-                "api": "/api/chat",
-                "health": "/health"
-            }
-        })
-
-    app.router.add_get('/health', health_check)
-    app.router.add_get('/', root_handler)
-
-    setup_application(app, dp, bot=bot)
-    logger.info(f"🚀 Запуск бота на порту {PORT}")
-    logger.info(f"📡 Webhook URL: {WEBHOOK_URL}")
     web.run_app(app, host="0.0.0.0", port=PORT)
 
 if __name__ == "__main__":
