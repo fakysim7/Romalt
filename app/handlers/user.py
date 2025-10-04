@@ -3,7 +3,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 import logging
 from API.ai_21 import ask_ai21_with_rag
 from aiohttp import web
-from app.services.rag_system import RAGSystem
+from services.rag_system import RAGSystem
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -131,4 +131,5 @@ def setup_web_routes(app):
     app.middlewares.append(cors_middleware)
 
     logger.info("✅ Web routes настроены: /api/chat, /health, /")
+
 
