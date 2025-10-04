@@ -46,12 +46,12 @@ class RAGSystem:
         for i, r in enumerate(results, 1):
             if r['content'] and len(r['content']) > 50:
                 domain = self._extract_domain(r['url'])
-                parts.append(f"📚 Источник {i} | {domain}:\n{self._clean_content(r['content'])}")
+                parts.append(f"Источник {i} | {domain}:\n{self._clean_content(r['content'])}")
                 parts.append("-"*40)
                 valid += 1
         if valid == 0:
             return f"По запросу '{original_query}' найдено мало релевантной информации."
-        parts.append(f"📊 Всего источников: {valid}")
+        parts.append(f"Всего источников: {valid}")
         full = "\n".join(parts)
         return full[:self.context_window] + ("\n[...информация обрезана...]" if len(full) > self.context_window else "")
 
@@ -84,3 +84,4 @@ class RAGSystem:
 
     async def close(self):
         await self.web_search.close()
+
