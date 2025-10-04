@@ -1,18 +1,14 @@
 from aiogram import Router, types, F
 from aiogram.types import (
-    InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+    InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo,
+    InlineQueryResultArticle, InputTextMessageContent
 )
 import json
 import logging
 from API.ai_21 import ask_ai21_with_rag
-from aiohttp import web
-import asyncio
 
 logger = logging.getLogger(__name__)
 router = Router()
-
-# Словарь для хранения ожидающих запросов из Mini App
-pending_requests = {}
 
 # Кнопка для открытия Mini App через inline
 @router.message(F.text & F.text.startswith("/mini_app"))
@@ -54,13 +50,17 @@ async def handle_mini_app_request(request):
         user_msg = data.get("text", "")
         request_id = data.get("request_id")
         
-        if not user_msg or not user_id:
-            return web.json_response({"error": "Missing parameters"}, status=400)
+        logger.info(f"Получен запрос из Mini App от {user_id}: {user_msg}")
+        
+        if not user_msg:
+            return web.json_response({"error": "Missing text parameter"}, status=400)
         
         messages = [{"role": "user", "content": user_msg}]
         
         # Получаем ответ от AI
         answer = await ask_ai21_with_rag(messages, user_id=str(user_id))
+        
+        logger.info(f"Ответ для {user_id}: {answer[:50]}...")
         
         return web.json_response({
             "success": True,
@@ -70,24 +70,34 @@ async def handle_mini_app_request(request):
         
     except Exception as e:
         logger.error(f"Ошибка обработки запроса Mini App: {e}")
-        return web.json_response({"error": str(e)}, status=500)
+        return web.json_response({
+            "success": False,
+            "error": str(e)
+        }, status=500)
 
-# Функция для настройки веб-сервера (вызывается в main.py)
+# Функция для настройки веб-сервера
 def setup_web_routes(app):
+    from aiohttp import web
+    
+    # Добавляем endpoint для чата
     app.router.add_post('/api/chat', handle_mini_app_request)
-    # Добавляем CORS headers
-    async def cors_middleware(app, handler):
-        async def middleware(request):
-            if request.method == 'OPTIONS':
-                return web.Response(
-                    headers={
-                        'Access-Control-Allow-Origin': '*',
-                        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                        'Access-Control-Allow-Headers': 'Content-Type'
-                    }
-                )
-            response = await handler(request)
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            return response
-        return middleware
+    
+    # Добавляем CORS middleware
+    @web.middleware
+    async def cors_middleware(request, handler):
+        if request.method == 'OPTIONS':
+            return web.Response(
+                headers={
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                }
+            )
+        
+        response = await handler(request)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+    
     app.middlewares.append(cors_middleware)
+    
+    logger.info("✅ Web routes настроены: /api/chat")
