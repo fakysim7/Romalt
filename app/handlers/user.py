@@ -115,8 +115,12 @@ def setup_web_routes(app):
             response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
             return response
+        except web.HTTPException as e:
+            # Это нормальные HTTP исключения (404, 405 и т.д.)
+            e.headers['Access-Control-Allow-Origin'] = '*'
+            raise
         except Exception as e:
-            logger.error(f"Error in CORS middleware: {e}")
+            logger.error(f"Unexpected error in CORS middleware: {e}", exc_info=True)
             return web.json_response(
                 {"error": "Internal server error"}, 
                 status=500,
@@ -126,6 +130,21 @@ def setup_web_routes(app):
     # Добавляем middleware
     app.middlewares.append(cors_middleware)
     
+    # Логирование всех запросов
+    @web.middleware
+    async def logging_middleware(request, handler):
+        logger.info(f"📨 {request.method} {request.path} from {request.remote}")
+        try:
+            response = await handler(request)
+            logger.info(f"✅ {request.method} {request.path} -> {response.status}")
+            return response
+        except Exception as e:
+            logger.error(f"❌ {request.method} {request.path} -> Error: {e}")
+            raise
+    
+    app.middlewares.insert(0, logging_middleware)
+    
     logger.info("✅ Web routes настроены:")
     logger.info("   📡 POST /api/chat - Mini App API")
     logger.info("   🔧 GET /health - Health check")
+    logger.info("   🏠 GET / - Root endpoint")
