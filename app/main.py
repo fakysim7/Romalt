@@ -51,6 +51,12 @@ def main():
         return web.json_response({"status": "ok", "webhook": WEBHOOK_URL})
 
     async def root_handler(request):
+        if request.method == "POST":
+            try:
+                data = await request.json()
+                return web.json_response({"success": True, "received": data})
+            except Exception as e:
+                return web.json_response({"success": False, "error": str(e)}, status=400)
         return web.json_response({
             "bot": "Telegram AI Bot",
             "status": "running",
@@ -60,6 +66,9 @@ def main():
                 "health": "/health"
             }
         })
+    
+    app.router.add_route('*', '/', root_handler)
+
 
     app.router.add_get('/health', health_check)
     app.router.add_get('/', root_handler)
@@ -71,4 +80,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
