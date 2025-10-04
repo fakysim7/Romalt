@@ -22,9 +22,6 @@ def get_current_time_belarus():
     return now.strftime("%H:%M:%S")
 
 async def ask_ai21_with_rag(messages: list, user_id: str = None, model="jamba-large", max_tokens=1024) -> str:
-    """
-    Генерация текста через AI21 с RAG, короткой памятью и актуальным временем
-    """
     try:
         user_msg = messages[-1]["content"] if messages else ""
 
@@ -54,7 +51,7 @@ async def ask_ai21_with_rag(messages: list, user_id: str = None, model="jamba-la
 {context_hint}
         """
 
-        # Формируем список сообщений для LLM
+
         chat_messages = [ChatMessage(role="system", content=system_message)]
         chat_messages += [ChatMessage(role=m["role"], content=m["content"]) for m in messages]
 
@@ -76,12 +73,12 @@ async def ask_ai21_with_rag(messages: list, user_id: str = None, model="jamba-la
             verified[fact] = "✅ подтверждено" if "не найдено" not in context.lower() else "⚠️ не подтверждено"
 
 
-        # Обновляем память пользователя
+
         if user_id:
             if user_id not in user_memory:
                 user_memory[user_id] = {"last_queries": [], "last_entities": {}}
 
-            # Добавляем последнее сообщение
+
             user_memory[user_id]["last_queries"].append(user_msg)
             if len(user_memory[user_id]["last_queries"]) > 10:
                 user_memory[user_id]["last_queries"].pop(0)
@@ -99,3 +96,4 @@ async def ask_ai21_with_rag(messages: list, user_id: str = None, model="jamba-la
 
 async def close_rag_system():
     await rag_system.close()
+
