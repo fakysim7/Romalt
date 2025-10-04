@@ -16,7 +16,10 @@ WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://your-domain.com")  # Заме�
 WEBHOOK_PATH = "/webhook/bot"
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
 
+# Для локальной разработки с ngrok используйте:
+# WEBHOOK_HOST = "https://abc123.ngrok-free.app"
 
+# Порт
 PORT = int(os.getenv("PORT", 8080))
 
 async def on_startup(bot: Bot):
@@ -40,20 +43,21 @@ async def on_shutdown(bot: Bot):
     logger.info("🛑 Webhook удален, бот остановлен")
 
 def main():
+    # Инициализация бота и диспетчера
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
     
     # Подключаем роутеры
     dp.include_router(user.router)
     
-
+    # Регистрируем startup и shutdown хуки
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
     
-
+    # Создаем aiohttp приложение
     app = web.Application()
     
-    # Настраиваем webhook handler
+    # Настраиваем webhook handler для Telegram
     webhook_handler = SimpleRequestHandler(
         dispatcher=dp,
         bot=bot
@@ -68,10 +72,31 @@ def main():
     
     # Health check endpoint
     async def health_check(request):
-        return web.json_response({"status": "ok", "webhook": WEBHOOK_URL})
+        return web.json_response({
+            "status": "ok", 
+            "webhook": WEBHOOK_URL,
+            "version": "1.0.0"
+        })
+    
+    # Favicon handler (чтобы браузер не выдавал ошибки)
+    async def favicon_handler(request):
+        return web.Response(status=204)
+    
+    # Root endpoint
+    async def root_handler(request):
+        return web.json_response({
+            "bot": "Telegram AI Bot",
+            "status": "running",
+            "endpoints": {
+                "webhook": WEBHOOK_PATH,
+                "api": "/api/chat",
+                "health": "/health"
+            }
+        })
     
     app.router.add_get('/health', health_check)
-    app.router.add_get('/', health_check)
+    app.router.add_get('/favicon.ico', favicon_handler)
+    app.router.add_get('/', root_handler)
     
     # Запускаем веб-сервер
     logger.info(f"🚀 Запуск бота на порту {PORT}")
