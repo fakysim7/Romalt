@@ -18,29 +18,24 @@ class RAGSystem:
         return hashlib.md5(query.encode('utf-8')).hexdigest()
 
     async def get_relevant_context(self, query: str) -> str:
-        """Получить релевантный контекст для любого запроса"""
+        """Всегда актуальный контекст"""
         try:
-            key = self._cache_key(query)
-            if key in self.cache:
-                return self.cache[key]
-
-            search_query = self._build_search_query(query)
+            current_year = datetime.now().year
+            search_query = self._build_search_query(query) + f" {current_year}"
             results = await self.web_search.search_and_extract(search_query, num_results=5)
             context = self._format_context(results, query)
-
-            self.cache[key] = context
             return context
         except Exception as e:
             logger.error(f"RAG error: {e}")
             return f"Не удалось получить актуальные данные для запроса: {query}"
-
-    def _build_search_query(self, original_query: str) -> str:
-        stop_words = {'как', 'что', 'где', 'когда', 'почему', 'зачем', 'мне', 'ты', 'вы', 'свой'}
-        words = original_query.lower().split()
-        filtered = [w for w in words if w not in stop_words and len(w) > 2]
-        if filtered:
-            return ' '.join(filtered) + ' актуальная информация 2025'
-        return original_query + ' информация'
+    
+        def _build_search_query(self, original_query: str) -> str:
+            stop_words = {'как', 'что', 'где', 'когда', 'почему', 'зачем', 'мне', 'ты', 'вы', 'свой'}
+            words = original_query.lower().split()
+            filtered = [w for w in words if w not in stop_words and len(w) > 2]
+            if filtered:
+                return ' '.join(filtered) + ' актуальная информация 2025'
+            return original_query + ' информация'
 
     def _format_context(self, results: List[Dict], original_query: str) -> str:
         if not results:
@@ -100,3 +95,4 @@ class RAGSystem:
 
     async def close(self):
         await self.web_search.close()
+
