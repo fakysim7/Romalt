@@ -13,7 +13,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://ai-sber.onrender.com")
 WEBHOOK_PATH = "/webhook/bot"
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
-PORT = int(os.getenv("PORT", 8080))
+PORT = int(os.getenv("PORT") or 8080)
+
 
 async def on_startup(bot: Bot):
     info = await bot.get_webhook_info()
@@ -70,3 +71,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
