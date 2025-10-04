@@ -31,6 +31,17 @@ async def cmd_start(message: types.Message):
         "🚀 Или используй /mini_app для открытия Mini App"
     )
 
+@router.message()
+async def handle_user_message(message: types.Message):
+    logger.info(f"Получено сообщение от {message.from_user.id}: {message.text}")
+    
+    try:
+        answer = await ask_ai21_with_rag(message.text)
+        await message.answer(answer)
+    except Exception as e:
+        logger.error(f"Ошибка при ответе на сообщение: {e}")
+        await message.answer("❌ Ошибка при получении ответа. Попробуйте позже.")
+
 
 @router.message(F.text & ~F.text.startswith("/"))
 async def handle_chat_message(message: types.Message):
@@ -111,4 +122,5 @@ def setup_web_routes(app):
 
     app.middlewares.append(cors_middleware)
     logger.info("✅ Web routes настроены: /api/chat, /health")
+
 
