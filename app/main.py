@@ -2,7 +2,7 @@ import os
 import logging
 from aiohttp import web
 from aiogram import Bot, Dispatcher
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from handlers import user
 from handlers.user import setup_web_routes
 from utils.logger import setup_logger
@@ -10,7 +10,7 @@ from utils.logger import setup_logger
 logger = setup_logger()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_HOST = os.getenv("WEBHOOK_HOST")  # https://ai-sber.onrender.com
+WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://ai-sber.onrender.com")
 WEBHOOK_PATH = "/webhook/bot"
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
 PORT = int(os.getenv("PORT", 8080))
@@ -26,7 +26,7 @@ async def on_startup(bot: Bot):
         )
         logger.info(f"✅ Webhook установлен: {WEBHOOK_URL}")
     else:
-        logger.info("ℹ️ Webhook уже установлен")
+        logger.info(f"ℹ️ Webhook уже установлен")
 
 async def on_shutdown(bot: Bot):
     await bot.delete_webhook()
@@ -44,10 +44,8 @@ def main():
     webhook_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
     webhook_handler.register(app, path=WEBHOOK_PATH)
 
-    # Настройка API Mini App
     setup_web_routes(app)
 
-    # Простые роуты
     async def health_check(request):
         return web.json_response({"status": "ok", "webhook": WEBHOOK_URL})
 
@@ -65,6 +63,7 @@ def main():
     app.router.add_get('/health', health_check)
     app.router.add_get('/', root_handler)
 
+    setup_application(app, dp, bot=bot)
     logger.info(f"🚀 Запуск бота на порту {PORT}")
     logger.info(f"📡 Webhook URL: {WEBHOOK_URL}")
     web.run_app(app, host="0.0.0.0", port=PORT)
