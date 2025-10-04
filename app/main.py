@@ -1,3 +1,4 @@
+# main.py
 import os
 import logging
 import asyncio
@@ -14,21 +15,10 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://ai-sber.onrender.com")
 WEBHOOK_PATH = "/webhook/bot"
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
-PORT = int(os.getenv("PORT") or 8080)
+PORT = int(os.getenv("PORT", 8080))
 
-# --- Keep-alive task ---
-async def keep_alive():
-    """Регулярный пинг своего /health, чтобы Render не засыпал"""
-    while True:
-        try:
-            async with ClientSession() as session:
-                async with session.get(f"{WEBHOOK_HOST}/health") as resp:
-                    logger.info(f"Keep-alive ping status: {resp.status}")
-        except Exception as e:
-            logger.warning(f"Keep-alive failed: {e}")
-        await asyncio.sleep(300)  # каждые 5 минут
+PING_INTERVAL = 240  # каждые 4 минуты
 
-# --- Startup / Shutdown ---
 async def on_startup(bot: Bot):
     info = await bot.get_webhook_info()
     logger.info(f"Webhook info: {info}")
@@ -47,7 +37,22 @@ async def on_shutdown(bot: Bot):
     await bot.session.close()
     logger.info("🛑 Webhook удален, бот остановлен")
 
-# --- Main ---
+async def self_ping(app: web.Application):
+    """Фоновая задача для пинга самого себя каждые PING_INTERVAL секунд"""
+    await asyncio.sleep(5)  # небольшая задержка после старта
+    url = f"{WEBHOOK_HOST}/health"
+    session = ClientSession()
+    try:
+        while True:
+            try:
+                async with session.get(url) as resp:
+                    logger.info(f"Self-ping {url}: {resp.status}")
+            except Exception as e:
+                logger.warning(f"Self-ping failed: {e}")
+            await asyncio.sleep(PING_INTERVAL)
+    finally:
+        await session.close()
+
 def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
@@ -75,14 +80,15 @@ def main():
             }
         })
 
-    app.router.add_get('/health', health_check)
-    app.router.add_get('/', root_handler)
+    if not any(r.path == '/health' for r in app.router.routes()):
+        app.router.add_get('/health', health_check)
+    if not any(r.path == '/' for r in app.router.routes()):
+        app.router.add_get('/', root_handler)
+
+    # запуск автопинга
+    app.on_startup.append(lambda app: asyncio.create_task(self_ping(app)))
 
     setup_application(app, dp, bot=bot)
-
-    # --- Запуск keep-alive ---
-    asyncio.create_task(keep_alive())
-
     logger.info(f"🚀 Запуск бота на порту {PORT}")
     logger.info(f"📡 Webhook URL: {WEBHOOK_URL}")
     web.run_app(app, host="0.0.0.0", port=PORT)
