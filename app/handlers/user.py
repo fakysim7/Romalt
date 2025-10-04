@@ -41,30 +41,36 @@ async def handle_chat_message(message: types.Message):
         logger.error(f"Ошибка обработки сообщения: {e}")
         await message.answer("Произошла ошибка при обработке запроса. Попробуйте позже.")
 
-# Mini App API
+# HTTP endpoint для получения запросов из Mini App
 async def handle_mini_app_request(request):
     try:
         data = await request.json()
         user_id = data.get("user_id")
         user_msg = data.get("text", "")
         request_id = data.get("request_id")
-        logger.info(f"📱 Запрос из Mini App: {user_id}: {user_msg[:50]}")
-
+        
         if not user_msg:
             return web.json_response({"success": False, "error": "Missing text parameter"}, status=400)
-
+        
         messages = [{"role": "user", "content": user_msg}]
+        
+        # Получаем ответ от AI
         answer = await ask_ai21_with_rag(messages, user_id=str(user_id))
-
-        return web.json_response({"success": True, "answer": answer, "request_id": request_id})
+        
+        return web.json_response({
+            "success": True,
+            "answer": answer,
+            "request_id": request_id
+        })
+        
     except Exception as e:
-        logger.error(f"Ошибка Mini App: {e}", exc_info=True)
+        logger.exception("Ошибка обработки запроса Mini App")
         return web.json_response({"success": False, "error": str(e)}, status=500)
 
+# Web routes setup
 def setup_web_routes(app):
     app.router.add_post('/api/chat', handle_mini_app_request)
 
-    # CORS
     @web.middleware
     async def cors_middleware(request, handler):
         if request.method == 'OPTIONS':
@@ -72,9 +78,12 @@ def setup_web_routes(app):
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                'Access-Control-Max-Age': '86400'
             })
         resp = await handler(request)
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
 
     app.middlewares.append(cors_middleware)
+
+    logger.info("✅ Web routes настроены: /api/chat, /health, /")
