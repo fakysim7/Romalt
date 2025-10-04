@@ -10,9 +10,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 rag_system = RAGSystem()
 
-# ===========================
-# Telegram: Mini App кнопка
-# ===========================
+
 @router.message(F.text & F.text.startswith("/mini_app"))
 async def send_mini_app_inline(message: types.Message):
     web_app = WebAppInfo(url="https://ai-mini-app.wuaze.com")
@@ -24,9 +22,7 @@ async def send_mini_app_inline(message: types.Message):
         reply_markup=keyboard
     )
 
-# ===========================
-# Telegram: /start
-# ===========================
+
 @router.message(F.text & F.text.startswith("/start"))
 async def cmd_start(message: types.Message):
     await message.answer(
@@ -35,9 +31,7 @@ async def cmd_start(message: types.Message):
         "🚀 Или используй /mini_app для открытия Mini App"
     )
 
-# ===========================
-# Telegram: обработка сообщений
-# ===========================
+
 @router.message(F.text & ~F.text.startswith("/"))
 async def handle_chat_message(message: types.Message):
     user_msg = message.text
@@ -63,9 +57,7 @@ async def handle_chat_message(message: types.Message):
         logger.exception(f"Ошибка обработки сообщения: {e}")
         await message.answer("Произошла ошибка при обработке запроса. Попробуйте позже.")
 
-# ===========================
-# Mini App: HTTP endpoint
-# ===========================
+
 async def handle_mini_app_request(request):
     try:
         data = await request.json()
@@ -93,9 +85,7 @@ async def handle_mini_app_request(request):
         logger.exception("Ошибка обработки запроса Mini App")
         return web.json_response({"success": False, "error": str(e)}, status=500)
 
-# ===========================
-# Настройка веб-маршрутов
-# ===========================
+
 def setup_web_routes(app):
     # Mini App endpoint
     app.router.add_post('/api/chat', handle_mini_app_request)
@@ -121,3 +111,4 @@ def setup_web_routes(app):
 
     app.middlewares.append(cors_middleware)
     logger.info("✅ Web routes настроены: /api/chat, /health")
+
