@@ -4,6 +4,7 @@ from services.web_search import WebSearch
 import logging
 import re
 import hashlib
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +29,14 @@ class RAGSystem:
         except Exception as e:
             logger.error(f"RAG error: {e}")
             return f"Не удалось получить актуальные данные для запроса: {query}"
-    
-        def _build_search_query(self, original_query: str) -> str:
-            stop_words = {'как', 'что', 'где', 'когда', 'почему', 'зачем', 'мне', 'ты', 'вы', 'свой'}
-            words = original_query.lower().split()
-            filtered = [w for w in words if w not in stop_words and len(w) > 2]
-            if filtered:
-                return ' '.join(filtered) + ' актуальная информация 2025'
-            return original_query + ' информация'
+
+    def _build_search_query(self, original_query: str) -> str:
+        stop_words = {'как', 'что', 'где', 'когда', 'почему', 'зачем', 'мне', 'ты', 'вы', 'свой'}
+        words = original_query.lower().split()
+        filtered = [w for w in words if w not in stop_words and len(w) > 2]
+        if filtered:
+            return ' '.join(filtered) + ' актуальная информация'
+        return original_query + ' информация'
 
     def _format_context(self, results: List[Dict], original_query: str) -> str:
         if not results:
@@ -61,38 +62,25 @@ class RAGSystem:
     def _clean_content(self, content: str) -> str:
         # убираем лишние пробелы и переносы
         content = re.sub(r'\s+', ' ', content)
-
         # убираем markdown-заголовки ###, ##, #
         content = re.sub(r'#{1,6}\s*', '', content)
-
         # убираем жирный/курсивный (**текст**, *текст*, _текст_, __текст__)
         content = re.sub(r'(\*\*|__)(.*?)\1', r'\2', content)  # жирный
         content = re.sub(r'(\*|_)(.*?)\1', r'\2', content)     # курсив
-
         # убираем ссылки [текст](url)
         content = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'\1', content)
-
         # убираем явные http/https ссылки
         content = re.sub(r'https?://\S+', '', content)
-
         # убираем начальные маркеры списков (-, *, •, >)
         content = re.sub(r'^[\s>*•-]+', '', content, flags=re.MULTILINE)
-
         # убираем повторяющиеся дефисы/равенства (---, ===)
         content = re.sub(r'[-=]{3,}', ' ', content)
-
         # убираем лишние markdown-символы (остатки `~`, `>`, '`')
         content = re.sub(r'[~`>]', '', content)
-
         # финальная нормализация пробелов
         content = re.sub(r'\s{2,}', ' ', content)
-
         cleaned = content.strip()
         return cleaned[:800] + '...' if len(cleaned) > 800 else cleaned
 
-
-
-
     async def close(self):
         await self.web_search.close()
-
