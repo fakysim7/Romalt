@@ -1,6 +1,7 @@
 import os
 import logging
-from aiohttp import web
+import asyncio
+from aiohttp import web, ClientSession
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from handlers import user
@@ -22,6 +23,19 @@ except ValueError:
     logger.warning(f"Некорректный PORT={PORT}, использую 8080")
     PORT = 8080
 
+# ---------------- Keep Alive ----------------
+async def keep_awake():
+    """Пингуем себя каждые 5 минут, чтобы Render не засыпал"""
+    while True:
+        try:
+            async with ClientSession() as session:
+                async with session.get(WEBHOOK_HOST) as resp:
+                    logger.info(f"Keep-alive ping, status {resp.status}")
+        except Exception as e:
+            logger.warning(f"Keep-alive error: {e}")
+        await asyncio.sleep(300)  # каждые 5 минут
+
+# ---------------- Bot Handlers ----------------
 async def on_startup(bot: Bot):
     info = await bot.get_webhook_info()
     logger.info(f"Webhook info: {info}")
@@ -40,6 +54,7 @@ async def on_shutdown(bot: Bot):
     await bot.session.close()
     logger.info("🛑 Webhook удален, бот остановлен")
 
+# ---------------- Main ----------------
 def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
@@ -74,6 +89,10 @@ def main():
         app.router.add_get('/', root_handler)
 
     setup_application(app, dp, bot=bot)
+
+    # ---------------- Запуск Keep-Alive ----------------
+    loop = asyncio.get_event_loop()
+    loop.create_task(keep_awake())
 
     logger.info(f"🚀 Запуск бота на порту {PORT}")
     logger.info(f"📡 Webhook URL: {WEBHOOK_URL}")
